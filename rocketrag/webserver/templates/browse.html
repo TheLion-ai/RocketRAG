@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Documents - 🚀RocketRAG{% endblock %}
+
+{% block page_title %}Document Browser{% endblock %}
+{% block page_description %}Browse and explore indexed documents{% endblock %}
+
+{% block styles %}
+<style>
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        margin: 20px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        color: #e6edf3;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .back-button:hover {
+        background: #30363d;
+        border-color: #FA500E;
+        color: #FA500E;
+    }
+    
+    .back-button::before {
+        content: "←";
+        font-size: 16px;
+    }
+    
+    .browse-container {
+        padding: 20px;
+        background: #0d1117;
+    }
+    .controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .control-group label {
+        color: #e6edf3;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    select {
+        padding: 8px 12px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-size: 14px;
+        background: #21262d;
+        color: #e6edf3;
+        min-width: 200px;
+    }
+    select:focus {
+        outline: none;
+        border-color: #FA500E;
+        box-shadow: 0 0 0 3px rgba(250, 80, 14, 0.1);
+    }
+    .document-content {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .document-header {
+        border-bottom: 1px solid #30363d;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .document-title {
+        color: #FA500E;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+    }
+    .document-stats {
+        color: #8b949e;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    .chunk {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .chunk-header {
+        color: #8b949e;
+        font-size: 12px;
+        margin-bottom: 10px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    }
+    .chunk-text {
+        color: #e6edf3;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    /* Pagination Styles */
+    #pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding: 20px;
+        border-top: 1px solid #30363d;
+    }
+    
+    #pagination-controls button {
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #e6edf3;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    
+    #pagination-controls button:hover:not(:disabled) {
+        background: #30363d;
+        border-color: #FA500E;
+    }
+    
+    #pagination-controls button:disabled {
+        background: #161b22;
+        border-color: #30363d;
+        color: #8b949e;
+        cursor: not-allowed;
+    }
+    
+    #page-info {
+        color: #e6edf3;
+        font-size: 14px;
+        min-width: 200px;
+        text-align: center;
+    }
+    .no-selection {
+        text-align: center;
+        color: #8b949e;
+        padding: 40px;
+        font-style: italic;
+    }
+    .loading {
+        text-align: center;
+        color: #8b949e;
+        padding: 20px;
+    }
+    .error {
+        background: #21262d;
+        border: 1px solid #f85149;
+        color: #f85149;
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-button">Back to Home</a>
+<div class="browse-container">
+    <div class="controls">
+        <div class="control-group">
+            <label for="documentSelect">Select Document:</label>
+            <select id="documentSelect">
+                <option value="">Choose a document...</option>
+                {% for filename in filenames %}
+                <option value="{{ filename }}">{{ filename }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    
+    <div id="documentContent">
+        {% if not filenames %}
+        <div class="no-selection">
+            No documents found. Please add documents to the database first.
+        </div>
+        {% else %}
+        <div class="no-selection">
+            Select a document from the dropdown to view its content.
+        </div>
+        {% endif %}
+    </div>
+    
+    <div id="pagination-controls" style="display: none; text-align: center; margin-top: 20px;">
+        <button id="prev-page" onclick="changePage(-1)" disabled>← Previous</button>
+        <span id="page-info" style="margin: 0 15px; color: #ccc;">Page 1 of 1</span>
+        <button id="next-page" onclick="changePage(1)" disabled>Next →</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const documentSelect = document.getElementById('documentSelect');
+    const documentContent = document.getElementById('documentContent');
+    let currentPage = 1;
+    let totalPages = 1;
+    let selectedFilename = '';
+    
+    documentSelect.addEventListener('change', function() {
+        selectedFilename = this.value;
+        currentPage = 1;
+        loadDocument(1);
+    });
+    
+    async function loadDocument(page = 1) {
+        if (!selectedFilename) {
+            documentContent.innerHTML = `
+                <div class="no-selection">
+                    Select a document from the dropdown to view its content.
+                </div>
+            `;
+            document.getElementById('pagination-controls').style.display = 'none';
+            return;
+        }
+        
+        // Show loading state
+        documentContent.innerHTML = `
+            <div class="loading">
+                Loading document chunks...
+            </div>
+        `;
+        
+        try {
+            const response = await fetch(`/browse/document/${encodeURIComponent(selectedFilename)}?page=${page}&per_page=10`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.chunks && data.chunks.length > 0) {
+                currentPage = data.pagination.current_page;
+                totalPages = data.pagination.total_pages;
+                
+                const chunksHtml = data.chunks.map((chunk, index) => {
+                    const globalIndex = (currentPage - 1) * data.pagination.per_page + index + 1;
+                    return `
+                        <div class="chunk">
+                            <div class="chunk-header">Chunk ${globalIndex} • ID: ${chunk.id}</div>
+                            <div class="chunk-text">${escapeHtml(chunk.text)}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                documentContent.innerHTML = `
+                    <div class="document-content">
+                        <div class="document-header">
+                            <h2 class="document-title">${escapeHtml(data.filename)}</h2>
+                            <div class="document-stats">${data.pagination.total_chunks} chunks total</div>
+                        </div>
+                        ${chunksHtml}
+                    </div>
+                `;
+                
+                // Update pagination controls
+                updatePaginationControls(data.pagination);
+            } else {
+                documentContent.innerHTML = `
+                    <div class="no-selection">
+                        No chunks found for this document.
+                    </div>
+                `;
+                document.getElementById('pagination-controls').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading document:', error);
+            documentContent.innerHTML = `
+                <div class="error">
+                    Error loading document: ${escapeHtml(error.message)}
+                </div>
+            `;
+            document.getElementById('pagination-controls').style.display = 'none';
+        }
+    }
+    
+    function updatePaginationControls(pagination) {
+        const paginationDiv = document.getElementById('pagination-controls');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+        
+        if (pagination.total_pages > 1) {
+            paginationDiv.style.display = 'block';
+            prevBtn.disabled = !pagination.has_prev;
+            nextBtn.disabled = !pagination.has_next;
+            pageInfo.textContent = `Page ${pagination.current_page} of ${pagination.total_pages} (${pagination.total_chunks} chunks)`;
+        } else {
+            paginationDiv.style.display = 'none';
+        }
+    }
+    
+    function changePage(direction) {
+        const newPage = currentPage + direction;
+        if (newPage >= 1 && newPage <= totalPages) {
+            loadDocument(newPage);
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}rocketrag - Chat{% endblock %}
+
+{% block page_title %}Chat with 🚀RocketRAG{% endblock %}
+{% block page_description %}Ask questions and get streaming responses with sources{% endblock %}
+
+{% block styles %}
+<style>
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        margin: 20px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        color: #e6edf3;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .back-button:hover {
+        background: #30363d;
+        border-color: #FA500E;
+        color: #FA500E;
+    }
+    
+    .back-button::before {
+        content: "←";
+        font-size: 16px;
+    }
+    
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 200px);
+        padding: 20px;
+    }
+    
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        scroll-behavior: smooth;
+    }
+    
+    .message {
+        margin-bottom: 20px;
+        padding: 16px;
+        border-radius: 8px;
+        max-width: 80%;
+    }
+    
+    .message.user {
+        background: #FA500E;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .message.bot {
+        background: #21262d;
+        border: 1px solid #30363d;
+        color: #e6edf3;
+    }
+    
+    .message.bot.streaming {
+        border-color: #FA500E;
+        box-shadow: 0 0 8px rgba(250, 80, 14, 0.2);
+    }
+    
+    .message-content {
+        line-height: 1.6;
+    }
+    
+    .message-content.user {
+        white-space: pre-wrap;
+    }
+    
+    .message-content.bot {
+        /* Markdown styles */
+    }
+    
+    .message-content.bot h1,
+    .message-content.bot h2,
+    .message-content.bot h3,
+    .message-content.bot h4,
+    .message-content.bot h5,
+    .message-content.bot h6 {
+        margin: 16px 0 8px 0;
+        color: #e6edf3;
+    }
+    
+    .message-content.bot p {
+        margin: 8px 0;
+    }
+    
+    .message-content.bot ul,
+    .message-content.bot ol {
+        margin: 8px 0;
+        padding-left: 20px;
+    }
+    
+    .message-content.bot li {
+        margin: 4px 0;
+    }
+    
+    .message-content.bot code {
+        background: #161b22;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        font-size: 13px;
+    }
+    
+    .message-content.bot pre {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 12px 0;
+        overflow-x: auto;
+    }
+    
+    .message-content.bot pre code {
+        background: none;
+        padding: 0;
+        border-radius: 0;
+    }
+    
+    .message-content.bot blockquote {
+        border-left: 3px solid #30363d;
+        padding-left: 12px;
+        margin: 12px 0;
+        color: #8b949e;
+    }
+    
+    .message-content.bot strong {
+        font-weight: 600;
+    }
+    
+    .message-content.bot em {
+        font-style: italic;
+    }
+    
+    .sources {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #30363d;
+    }
+    
+    .sources-title {
+        font-size: 12px;
+        color: #8b949e;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .source {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 6px;
+        font-size: 12px;
+    }
+    
+    .source-filename {
+        color: #FA500E;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .source-text {
+        color: #8b949e;
+        line-height: 1.4;
+    }
+    
+    .input-container {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    
+    .input-wrapper {
+        flex: 1;
+        position: relative;
+    }
+    
+    #question-input {
+        width: 100%;
+        min-height: 44px;
+        max-height: 120px;
+        padding: 12px 16px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        color: #e6edf3;
+        font-family: inherit;
+        font-size: 14px;
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s ease;
+        box-sizing: border-box;
+    }
+    
+    #question-input:focus {
+        border-color: #FA500E;
+        box-shadow: 0 0 0 2px rgba(250, 80, 14, 0.1);
+    }
+    
+    #send-button {
+        padding: 12px 20px;
+        background: #238636;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        min-width: 80px;
+        height: 44px;
+        align-self: flex-end;
+    }
+    
+    #send-button:hover:not(:disabled) {
+        background: #2ea043;
+    }
+    
+    #send-button:disabled {
+        background: #30363d;
+        color: #8b949e;
+        cursor: not-allowed;
+    }
+    
+    .typing-indicator {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #8b949e;
+        font-size: 14px;
+        margin: 12px 0;
+        padding: 8px;
+    }
+    
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: #8b949e;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+    
+    .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typing {
+        0%, 60%, 100% {
+            opacity: 0.3;
+        }
+        30% {
+            opacity: 1;
+        }
+    }
+    
+    .empty-state {
+        text-align: center;
+        color: #8b949e;
+        padding: 40px 20px;
+        font-size: 16px;
+    }
+    
+    .empty-state h3 {
+        color: #e6edf3;
+        margin-bottom: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-button">Back to Home</a>
+<div class="chat-container">
+    <div class="messages-container" id="messages">
+        <div class="empty-state">
+            <h3>Welcome to rocketrag Chat</h3>
+            <p>Ask any question about your documents and get instant answers with sources.</p>
+        </div>
+    </div>
+    
+    <div class="typing-indicator" id="typing-indicator">
+        <span>rocketrag is thinking</span>
+        <div class="typing-dots">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>
+    
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea 
+                id="question-input" 
+                placeholder="Ask a question about your documents..."
+                rows="1"
+            ></textarea>
+        </div>
+        <button id="send-button" type="button">Send</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<script>
+const messagesContainer = document.getElementById('messages');
+const questionInput = document.getElementById('question-input');
+const sendButton = document.getElementById('send-button');
+const typingIndicator = document.getElementById('typing-indicator');
+
+let isStreaming = false;
+
+// Auto-resize textarea
+questionInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Send message on Enter (but allow Shift+Enter for new lines)
+questionInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+sendButton.addEventListener('click', sendMessage);
+
+function addMessage(content, isUser = false, isStreaming = false) {
+    // Remove empty state if it exists
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user' : 'bot'}${isStreaming ? ' streaming' : ''}`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = `message-content ${isUser ? 'user' : 'bot'}`;
+    
+    if (isUser) {
+        contentDiv.textContent = content;
+    } else {
+        // For bot messages, we'll update content via updateBotMessage
+        contentDiv.innerHTML = '';
+    }
+    
+    messageDiv.appendChild(contentDiv);
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return messageDiv;
+}
+
+function updateBotMessage(messageDiv, content, isComplete = false) {
+    const contentDiv = messageDiv.querySelector('.message-content');
+    if (isComplete && content.trim()) {
+        // Render as markdown when complete
+        contentDiv.innerHTML = marked.parse(content);
+    } else {
+        // Show plain text while streaming
+        contentDiv.textContent = content;
+    }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function addSources(messageDiv, sources) {
+    if (!sources || sources.length === 0) return;
+    
+    const sourcesDiv = document.createElement('div');
+    sourcesDiv.className = 'sources';
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'sources-title';
+    titleDiv.textContent = 'Sources:';
+    sourcesDiv.appendChild(titleDiv);
+    
+    sources.forEach(source => {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.className = 'source';
+        
+        const filenameDiv = document.createElement('div');
+        filenameDiv.className = 'source-filename';
+        filenameDiv.textContent = source.filename || 'Unknown';
+        
+        const textDiv = document.createElement('div');
+        textDiv.className = 'source-text';
+        textDiv.textContent = source.text || '';
+        
+        sourceDiv.appendChild(filenameDiv);
+        sourceDiv.appendChild(textDiv);
+        sourcesDiv.appendChild(sourceDiv);
+    });
+    
+    messageDiv.appendChild(sourcesDiv);
+}
+
+async function sendMessage() {
+    const question = questionInput.value.trim();
+    if (!question || isStreaming) return;
+    
+    // Add user message
+    addMessage(question, true);
+    
+    // Clear input and disable
+    questionInput.value = '';
+    questionInput.style.height = 'auto';
+    questionInput.disabled = true;
+    sendButton.disabled = true;
+    isStreaming = true;
+    
+    // Show typing indicator
+    typingIndicator.style.display = 'flex';
+    
+    // Create bot message for streaming
+    const botMessage = addMessage('', false, true);
+    let fullContent = '';
+    
+    try {
+        const response = await fetch('/ask/stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ question: question })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let sources = [];
+        
+        // Hide typing indicator once streaming starts
+        typingIndicator.style.display = 'none';
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        if (data.content) {
+                            fullContent += data.content;
+                            updateBotMessage(botMessage, fullContent, false);
+                        }
+                        
+                        if (data.sources) {
+                            sources = data.sources;
+                        }
+                        
+                        if (data.done) {
+                            // Remove streaming class, render final markdown, and add sources
+                            botMessage.classList.remove('streaming');
+                            updateBotMessage(botMessage, fullContent, true);
+                            addSources(botMessage, sources);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing SSE data:', e);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        updateBotMessage(botMessage, 'Sorry, there was an error processing your request.', true);
+        botMessage.classList.remove('streaming');
+        typingIndicator.style.display = 'none';
+    } finally {
+        // Re-enable input
+        questionInput.disabled = false;
+        sendButton.disabled = false;
+        isStreaming = false;
+        questionInput.focus();
+    }
+}
+
+// Focus input on page load
+questionInput.focus();
+</script>
+{% endblock %}

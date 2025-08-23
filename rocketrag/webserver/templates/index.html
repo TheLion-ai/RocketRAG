@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}rocketrag - Home{% endblock %}
+
+{% block page_title %}🚀RocketRAG{% endblock %}
+{% block page_description %}Fast, efficient, minimal, extendible and elegant RAG{% endblock %}
+
+{% block styles %}
+<style>
+    .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 30px;
+    }
+    .nav-card {
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 24px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s ease;
+    }
+    .nav-card:hover {
+        border-color: #FA500E;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(250, 80, 14, 0.1);
+    }
+    .nav-card h3 {
+        margin: 0 0 12px 0;
+        color: #FA500E;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .nav-card p {
+        margin: 0;
+        color: #8b949e;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .api-info {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 20px;
+        margin: 20px 30px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        font-size: 13px;
+    }
+    .api-info h4 {
+        margin: 0 0 12px 0;
+        color: #e6edf3;
+        font-size: 14px;
+    }
+    .endpoint {
+        color: #D2691E;
+        margin: 4px 0;
+        text-decoration: none;
+        display: block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    .endpoint:hover {
+        color: #FA500E;
+        background: rgba(250, 80, 14, 0.1);
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nav-grid">
+    <a href="/chat" class="nav-card">
+        <h3>Chat</h3>
+        <p>Interactive chat interface with streaming responses. Ask questions about your documents and get real-time answers with sources.</p>
+    </a>
+    
+    <a href="/browse" class="nav-card">
+        <h3>Browse Documents</h3>
+        <p>Explore and view the documents in your knowledge base. Browse through chunks and see how your content is organized.</p>
+    </a>
+    
+    <a href="/visualize" class="nav-card">
+        <h3>Visualize Vectors</h3>
+        <p>Interactive visualization of your document vectors. See how similar documents cluster together in vector space.</p>
+    </a>
+</div>
+
+<div class="api-info">
+    <h4>API Endpoints</h4>
+    <a href="/docs" class="endpoint">POST /ask - Ask questions to your knowledge base</a>
+    <a href="/docs" class="endpoint">POST /ask/stream - Stream responses for real-time answers</a>
+    <a href="/docs" class="endpoint">GET /health - Check API health status</a>
+</div>
+{% endblock %}

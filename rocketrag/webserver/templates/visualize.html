@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Vector Visualization - 🚀RocketRAG{% endblock %}
+
+{% block page_title %}Vector Visualization{% endblock %}
+{% block page_description %}Interactive exploration of document embeddings{% endblock %}
+
+{% block head %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        margin: 20px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        color: #e6edf3;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .back-button:hover {
+        background: #30363d;
+        border-color: #FA500E;
+        color: #FA500E;
+    }
+    
+    .back-button::before {
+        content: "←";
+        font-size: 16px;
+    }
+    
+    .controls {
+        padding: 20px;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+        background: #0d1117;
+    }
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .control-group label {
+        color: #e6edf3;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    input, select, button {
+        padding: 8px 12px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-size: 14px;
+        background: #21262d;
+        color: #e6edf3;
+    }
+    input:focus, select:focus {
+        outline: none;
+        border-color: #FA500E;
+        box-shadow: 0 0 0 3px rgba(250, 80, 14, 0.1);
+    }
+    button {
+        background: #238636;
+        border-color: #238636;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-weight: 500;
+    }
+    button:hover {
+        background: #2ea043;
+    }
+    #visualization {
+        padding: 20px;
+        text-align: center;
+        background: #0d1117;
+    }
+    .tooltip {
+        position: absolute;
+        background: #161b22;
+        border: 1px solid #30363d;
+        color: #e6edf3;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        max-width: 400px;
+        max-height: 300px;
+        overflow-y: auto;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        line-height: 1.4;
+    }
+    .tooltip strong {
+        color: #FA500E;
+    }
+    .tooltip-text {
+        margin-top: 8px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #8b949e;
+    }
+    .error {
+        background: #21262d;
+        border: 1px solid #f85149;
+        color: #f85149;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 20px;
+    }
+    .legend {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 0 20px 20px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #e6edf3;
+    }
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 1px solid #30363d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-button">Back to Home</a>
+<div class="controls">
+    <div class="control-group">
+        <label>Question:</label>
+        <input type="text" id="questionInput" placeholder="Enter a question to highlight similar chunks" style="width: 300px;">
+        <button onclick="updateVisualization()">Visualize</button>
+    </div>
+    <div class="control-group">
+        <label>Limit:</label>
+        <select id="limitSelect">
+            <option value="50">50 vectors</option>
+            <option value="100">100 vectors</option>
+            <option value="200" selected>200 vectors</option>
+            <option value="500">500 vectors</option>
+        </select>
+    </div>
+    <div class="control-group">
+        <label>File Filter:</label>
+        <input type="text" id="fileFilter" placeholder="Filter by filename">
+    </div>
+    <button onclick="resetView()">Reset View</button>
+</div>
+
+<div id="visualization">
+    <div class="loading">Loading visualization...</div>
+</div>
+
+<div id="legend" class="legend"></div>
+
+<div class="tooltip" id="tooltip"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let svg, xScale, yScale, zoom, data = null;
+    const margin = {top: 20, right: 20, bottom: 20, left: 20};
+    const width = 800 - margin.left - margin.right;
+    const height = 600 - margin.top - margin.bottom;
+    
+    const colors = d3.schemeCategory10;
+    
+    function initVisualization() {
+        const container = d3.select('#visualization');
+        container.html('');
+        
+        svg = container.append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom);
+        
+        const g = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        zoom = d3.zoom()
+            .scaleExtent([0.5, 10])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+        
+        svg.call(zoom);
+        
+        xScale = d3.scaleLinear().range([0, width]);
+        yScale = d3.scaleLinear().range([height, 0]);
+    }
+    
+    async function loadData(question = null, limit = 200, fileFilter = null) {
+        try {
+            let url = `/visualize/data?limit=${limit}`;
+            if (question) url += `&question=${encodeURIComponent(question)}`;
+            if (fileFilter) url += `&filename_filter=${encodeURIComponent(fileFilter)}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error loading data:', error);
+            document.getElementById('visualization').innerHTML = 
+                `<div class="error">Error loading data: ${error.message}</div>`;
+            return null;
+        }
+    }
+    
+    function renderVisualization(data) {
+        if (!data || !data.points) return;
+        
+        const g = svg.select('g');
+        g.selectAll('*').remove();
+        
+        // Set scales
+        const xExtent = d3.extent(data.points, d => d.x);
+        const yExtent = d3.extent(data.points, d => d.y);
+        
+        xScale.domain(xExtent);
+        yScale.domain(yExtent);
+        
+        // Create color scale for filenames
+        const filenames = [...new Set(data.points.map(d => d.filename))];
+        const colorScale = d3.scaleOrdinal(colors).domain(filenames);
+        
+        // Create tooltip
+        const tooltip = d3.select('#tooltip');
+        
+        // Draw points
+        const circles = g.selectAll('circle')
+            .data(data.points)
+            .enter().append('circle')
+            .attr('cx', d => xScale(d.x))
+            .attr('cy', d => yScale(d.y))
+            .attr('r', d => d.is_question ? 8 : (d.similarity ? 6 + d.similarity * 4 : 4))
+            .attr('fill', d => d.is_question ? '#ff6b6b' : colorScale(d.filename))
+            .attr('stroke', d => d.similarity ? '#FA500E' : '#30363d')
+            .attr('stroke-width', d => d.similarity ? 2 : 1)
+            .attr('opacity', d => d.similarity ? 0.9 : 0.7)
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                tooltip.style('opacity', 1)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px')
+                    .html(`
+                        <strong>File:</strong> ${d.filename}<br>
+                        ${d.similarity ? `<strong>Similarity:</strong> ${(d.similarity * 100).toFixed(1)}%<br>` : ''}
+                        <div class="tooltip-text">${d.text.substring(0, 200)}${d.text.length > 200 ? '...' : ''}</div>
+                    `);
+                
+                d3.select(this).attr('stroke-width', 3);
+            })
+            .on('mouseout', function(event, d) {
+                tooltip.style('opacity', 0);
+                d3.select(this).attr('stroke-width', d => d.similarity ? 2 : 1);
+            });
+        
+        // Update legend
+        updateLegend(filenames, colorScale);
+    }
+    
+    function updateLegend(filenames, colorScale) {
+        const legend = d3.select('#legend');
+        legend.selectAll('*').remove();
+        
+        const legendItems = legend.selectAll('.legend-item')
+            .data(filenames)
+            .enter().append('div')
+            .attr('class', 'legend-item');
+        
+        legendItems.append('div')
+            .attr('class', 'legend-color')
+            .style('background-color', d => colorScale(d));
+        
+        legendItems.append('span')
+            .text(d => d);
+    }
+    
+    async function updateVisualization() {
+        const question = document.getElementById('questionInput').value.trim();
+        const limit = parseInt(document.getElementById('limitSelect').value);
+        const fileFilter = document.getElementById('fileFilter').value.trim();
+        
+        document.getElementById('visualization').innerHTML = '<div class="loading">Loading visualization...</div>';
+        
+        const data = await loadData(question || null, limit, fileFilter || null);
+        if (data) {
+            initVisualization();
+            renderVisualization(data);
+        }
+    }
+    
+    function resetView() {
+        if (svg && zoom) {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        updateVisualization();
+    });
+    
+    // Allow Enter key to trigger visualization update
+    document.getElementById('questionInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') updateVisualization();
+    });
+</script>
+{% endblock %}
