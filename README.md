@@ -35,11 +35,8 @@ pip install rocketrag
 ```python
 from rocketrag import RocketRAG
 
-# Initialize with default high-performance settings
-rag = RocketRAG()
-
-# Prepare your documents (supports PDF, TXT, MD, etc.)
-rag.prepare()
+rag = RocketRAG(./data) # Path do your data (supports PDF, TXT, MD, etc.)
+rag.prepare() # Constructuct vector database
 
 # Ask questions
 answer, sources = rag.ask("What is the main topic of the documents?")
