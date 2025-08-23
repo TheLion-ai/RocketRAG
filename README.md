@@ -36,7 +36,7 @@ pip install rocketrag
 from rocketrag import RocketRAG
 
 rag = RocketRAG(./data) # Path do your data (supports PDF, TXT, MD, etc.)
-rag.prepare() # Constructuct vector database
+rag.prepare() # Construct vector database
 
 # Ask questions
 answer, sources = rag.ask("What is the main topic of the documents?")
