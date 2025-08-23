@@ -35,7 +35,7 @@ pip install rocketrag
 ```python
 from rocketrag import RocketRAG
 
-rag = RocketRAG(./data) # Path do your data (supports PDF, TXT, MD, etc.)
+rag = RocketRAG("./data") # Path do your data (supports PDF, TXT, MD, etc.)
 rag.prepare() # Construct vector database
 
 # Ask questions
