@@ -13,8 +13,7 @@ class KreuzbergLoader(BaseLoader):
     def load_files_from_dir(self, path: str):
         documents: list[Document] = []
         for file in Path(path).iterdir():
-            if file.suffix == ".pdf":
-                documents.append(Document(extract_file_sync(file).content, file.name))
+            documents.append(Document(extract_file_sync(file).content, file.name))
         return documents
 
 
