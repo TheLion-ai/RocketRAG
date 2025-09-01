@@ -1,31 +1,44 @@
 import os
-
-os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-
 import typer
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
 import json
 import warnings
-import os
-from .vectors import init_vectorizer
-from .db import MilvusLiteDB
-from .chonk import init_chonker
-from .llm import LLamaLLM
-from .loaders import init_loader
-from .visualization import VectorVisualizer
-from .display_utils import (
-    display_streaming_answer,
-)
-from .rocketrag import RocketRAG
 
-# Suppress pkg_resources deprecation warnings from milvus-lite
-warnings.filterwarnings("ignore", message=".*pkg_resources is deprecated.*")
 
-# Set environment variables to suppress gRPC warnings
-os.environ["GRPC_VERBOSITY"] = "ERROR"
-os.environ["GRPC_TRACE"] = ""
+# Lazy imports - only import heavy dependencies when needed
+def _lazy_imports():
+    """Import heavy dependencies only when actually needed."""
+    # Set PyTorch environment variable
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
+    # Suppress pkg_resources deprecation warnings from milvus-lite
+    warnings.filterwarnings("ignore", message=".*pkg_resources is deprecated.*")
+
+    # Set environment variables to suppress gRPC warnings
+    os.environ["GRPC_VERBOSITY"] = "ERROR"
+    os.environ["GRPC_TRACE"] = ""
+
+    from .vectors import init_vectorizer
+    from .db import MilvusLiteDB
+    from .chonk import init_chonker
+    from .llm import LLamaLLM
+    from .loaders import init_loader
+    from .visualization import VectorVisualizer
+    from .display_utils import display_streaming_answer
+    from .rocketrag import RocketRAG
+
+    return {
+        "init_vectorizer": init_vectorizer,
+        "MilvusLiteDB": MilvusLiteDB,
+        "init_chonker": init_chonker,
+        "LLamaLLM": LLamaLLM,
+        "init_loader": init_loader,
+        "VectorVisualizer": VectorVisualizer,
+        "display_streaming_answer": display_streaming_answer,
+        "RocketRAG": RocketRAG,
+    }
 
 
 app = typer.Typer()
@@ -59,16 +72,26 @@ def prepare(
     ),
     recreate: bool = typer.Option(False, help="Recreate the collection if it exists"),
 ):
+    """Prepare the RAG system by processing documents and creating embeddings."""
+    # Import heavy dependencies only when needed
+    imports = _lazy_imports()
+
+    print(Panel("[bold blue]Preparing RAG system...[/bold blue]"))
+
     # Parse JSON arguments
-    chonker_config = json.loads(chonker_args)
-    vectorizer_config = json.loads(vectorizer_args)
-    loader_config = json.loads(loader_args)
+    chonker_args_dict = json.loads(chonker_args)
+    vectorizer_args_dict = json.loads(vectorizer_args)
+    loader_args_dict = json.loads(loader_args)
 
-    vectorizer = init_vectorizer("sentence_transformers", **vectorizer_config)
-    chunker = init_chonker(chonker, **chonker_config)
-    loader = init_loader(loader, **loader_config)
+    # Initialize components
+    vectorizer = imports["init_vectorizer"](
+        "sentence_transformers", **vectorizer_args_dict
+    )
+    chunker = imports["init_chonker"](chonker, **chonker_args_dict)
+    loader = imports["init_loader"](loader, **loader_args_dict)
 
-    rag = RocketRAG(
+    # Create RAG system
+    rag = imports["RocketRAG"](
         data_dir,
         db_path,
         collection_name,
@@ -90,9 +113,11 @@ def llm(
         "*Q8_0.gguf", help="Model filename pattern to load from the repository"
     ),
 ):
-    llm = LLamaLLM(repo_id, filename)
+    """Query the LLM directly"""
+    imports = _lazy_imports()
+    llm = imports["LLamaLLM"](repo_id, filename)
     stream = llm.stream([{"role": "user", "content": question}])
-    display_streaming_answer(question, stream)
+    imports["display_streaming_answer"](question, stream)
 
 
 @app.command()
@@ -106,7 +131,7 @@ def ask(
         "*Q8_0.gguf", help="Model filename pattern to load from the repository"
     ),
     vectorizer_args: str = typer.Option(
-        '{"model_name": "all-MiniLM-L6-v2"}',
+        '{"model_name": "minishlab/potion-multilingual-128M"}',
         help="JSON string with vectorizer configuration arguments",
     ),
     db_path: str = typer.Option("rag.db", help="Path to the database file"),
@@ -114,19 +139,24 @@ def ask(
         "rag", help="Name of the collection in the database"
     ),
 ):
+    """Ask a question to the RAG system"""
+    imports = _lazy_imports()
+
     vectorizer_config = json.loads(vectorizer_args)
-    vectorizer = init_vectorizer("sentence_transformers", **vectorizer_config)
+    vectorizer = imports["init_vectorizer"](
+        "sentence_transformers", **vectorizer_config
+    )
 
-    llm = LLamaLLM(**{"repo_id": repo_id, "filename": filename})
+    llm = imports["LLamaLLM"](**{"repo_id": repo_id, "filename": filename})
 
-    rag = RocketRAG(
+    rag = imports["RocketRAG"](
         db_path=db_path,
         collection_name=collection_name,
         vectorizer=vectorizer,
         llm=llm,
     )
     stream, sources = rag.stream_ask(question)
-    display_streaming_answer(question, stream, sources)
+    imports["display_streaming_answer"](question, stream, sources)
 
 
 @app.command()
@@ -162,19 +192,25 @@ def server(
         "rag", help="Name of the collection in the database"
     ),
 ):
-    """Start the RAG web server with OpenAI compatible API endpoints."""
+    """Start the RAG web server"""
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
     from .webserver import start_server
 
     print(f"Starting rocketrag server on {host}:{port}")
+
+    imports = _lazy_imports()
 
     # Parse JSON arguments for server configuration
     chonker_config = json.loads(chonker_args)
     vectorizer_config = json.loads(vectorizer_args)
     loader_config = json.loads(loader_args)
-    vectorizer = init_vectorizer("sentence_transformers", **vectorizer_config)
-    chunker = init_chonker(chonker, **chonker_config)
-    loader = init_loader(loader, **loader_config)
-    rag = RocketRAG(
+    vectorizer = imports["init_vectorizer"](
+        "sentence_transformers", **vectorizer_config
+    )
+    chunker = imports["init_chonker"](chonker, **chonker_config)
+    loader = imports["init_loader"](loader, **loader_config)
+    rag = imports["RocketRAG"](
         db_path=db_path,
         collection_name=collection_name,
         vectorizer=vectorizer,
@@ -204,13 +240,18 @@ def visualize(
         None, help="Question to encode and visualize on the map with similar chunks"
     ),
 ):
+    """Visualize the vector space in the database"""
     console = Console()
+
+    imports = _lazy_imports()
 
     try:
         vectorizer_config = json.loads(vectorizer_args)
-        vectorizer = init_vectorizer("sentence_transformers", **vectorizer_config)
+        vectorizer = imports["init_vectorizer"](
+            "sentence_transformers", **vectorizer_config
+        )
 
-        db = MilvusLiteDB(
+        db = imports["MilvusLiteDB"](
             db_path=db_path, collection_name=collection_name, vectorizer=vectorizer
         )
 
@@ -251,7 +292,7 @@ def visualize(
             for record in records
         ]
 
-        visualizer = VectorVisualizer(console=console)
+        visualizer = imports["VectorVisualizer"](console=console)
 
         with console.status("[bold green]Analyzing vectors..."):
             analysis_result = visualizer.analyze_vectors(vectors, metadata)

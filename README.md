@@ -26,8 +26,18 @@ RocketRAG is built on top of cutting-edge, performance-optimized libraries:
 
 ### Installation
 
+#### Using pip
 ```bash
 pip install rocketrag
+```
+
+#### Using uvx (recommended for CLI usage)
+```bash
+# Run directly without installation
+uvx rocketrag --help
+
+# Or install globally
+uvx install rocketrag
 ```
 
 ### Basic Usage
@@ -54,6 +64,17 @@ rocketrag ask "What are the key findings?"
 
 # Start web server
 rocketrag server --port 8000
+```
+
+#### Using uvx (no installation required)
+```bash
+# Same commands work with uvx
+uvx rocketrag prepare --data-dir ./documents
+uvx rocketrag ask "What are the key findings?"
+uvx rocketrag server --port 8000
+
+# Run as module
+uvx --from rocketrag python -m rocketrag --help
 ```
 
 ## 🏗️ Architecture

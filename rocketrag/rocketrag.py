@@ -78,7 +78,6 @@ class RocketRAG:
             self.chonker,
             self.metadata,
         )
-        self.rag = RAG(self.db, self.llm)
 
     def prepare(self, recreate: bool = False):
         if self.loader is None:
@@ -101,11 +100,13 @@ class RocketRAG:
     @ensure_llm_loaded
     def ask(self, question: str) -> tuple[str, list[SearchResult]]:
         # TODO: Should print the error on vectorizer mismach
-        stream, sources = self.rag.run(question)
+        rag = RAG(self.db, self.llm)
+        stream, sources = rag.run(question)
         return stream, sources
 
     @ensure_llm_loaded
     def stream_ask(self, question: str) -> tuple[str, list[SearchResult]]:
         # TODO: Should print the error on vectorizer mismach
-        stream, sources = self.rag.stream(question)
+        rag = RAG(self.db, self.llm)
+        stream, sources = rag.stream(question)
         return stream, sources
