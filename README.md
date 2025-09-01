@@ -4,6 +4,12 @@
 
 RocketRAG is a high-performance Retrieval-Augmented Generation (RAG) system designed with a focus on speed, simplicity, and extensibility. Built on top of state-of-the-art libraries, it provides both CLI and web server capabilities for seamless integration into any workflow.
 
+
+
+https://github.com/user-attachments/assets/1bd7cc50-9eac-4402-80bd-42933ac35ca3
+
+
+
 ## 🎯 Mission
 
 RocketRAG aims to be the **fastest and most efficient RAG library** while maintaining:
