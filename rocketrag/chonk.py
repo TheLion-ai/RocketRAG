@@ -3,7 +3,7 @@ from chonkie import (
     SentenceChunker,
     RecursiveChunker,
     SemanticChunker,
-    SDPMChunker,
+    SlumberChunker,
     LateChunker,
     CodeChunker,
     NeuralChunker,
@@ -61,7 +61,7 @@ class ChonkieChunker(BaseChunker):
         - similarity_window: Number of sentences for similarity calculation (default: 1)
         - delim: Delimiters to split sentences (default: ['.', '!', '?', '\n'])
 
-    SDPMChunker:
+    SlumberChunker:
         - embedding_model: Model for embeddings (default: "minishlab/potion-base-8M")
         - threshold: Similarity threshold (default: "auto")
         - chunk_size: Maximum tokens per chunk (default: 2048)
@@ -116,7 +116,7 @@ class ChonkieChunker(BaseChunker):
         elif method == "semantic":
             self.chunker = SemanticChunker(**kwargs)
         elif method == "sdpm":
-            self.chunker = SDPMChunker(**kwargs)
+            self.chunker = SlumberChunker(**kwargs)
         elif method == "late":
             self.chunker = LateChunker(**kwargs)
         elif method == "code":
