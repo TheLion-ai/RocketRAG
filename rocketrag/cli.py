@@ -10,6 +10,8 @@ import warnings
 # Lazy imports - only import heavy dependencies when needed
 def _lazy_imports():
     """Import heavy dependencies only when actually needed."""
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    
     # Set PyTorch environment variable
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
@@ -20,14 +22,38 @@ def _lazy_imports():
     os.environ["GRPC_VERBOSITY"] = "ERROR"
     os.environ["GRPC_TRACE"] = ""
 
-    from .vectors import init_vectorizer
-    from .db import MilvusLiteDB
-    from .chonk import init_chonker
-    from .llm import LLamaLLM
-    from .loaders import init_loader
-    from .visualization import VectorVisualizer
-    from .display_utils import display_streaming_answer
-    from .rocketrag import RocketRAG
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        task_id = progress.add_task("Loading dependencies...", total=None)
+        
+        progress.update(task_id, description="Loading vector processing...")
+        from .vectors import init_vectorizer
+        
+        progress.update(task_id, description="Loading database components...")
+        from .db import MilvusLiteDB
+        
+        progress.update(task_id, description="Loading chunking components...")
+        from .chonk import init_chonker
+        
+        progress.update(task_id, description="Loading language models...")
+        from .llm import LLamaLLM
+        
+        progress.update(task_id, description="Loading document loaders...")
+        from .loaders import init_loader
+        
+        progress.update(task_id, description="Loading visualization components...")
+        from .visualization import VectorVisualizer
+        
+        progress.update(task_id, description="Loading display utilities...")
+        from .display_utils import display_streaming_answer
+        
+        progress.update(task_id, description="Loading RAG framework...")
+        from .rocketrag import RocketRAG
+        
+        progress.update(task_id, description="Dependencies loaded ✓")
 
     return {
         "init_vectorizer": init_vectorizer,
