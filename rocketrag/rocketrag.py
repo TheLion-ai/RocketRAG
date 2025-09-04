@@ -79,6 +79,8 @@ class RocketRAG:
             self.metadata,
         )
 
+        self.rag = RAG(self.db, self.llm)
+
     def prepare(self, recreate: bool = False):
         if self.loader is None:
             raise ValueError("Loader is not defined.")
@@ -100,13 +102,11 @@ class RocketRAG:
     @ensure_llm_loaded
     def ask(self, question: str) -> tuple[str, list[SearchResult]]:
         # TODO: Should print the error on vectorizer mismach
-        rag = RAG(self.db, self.llm)
-        stream, sources = rag.run(question)
+        stream, sources = self.rag.run(question)
         return stream, sources
 
     @ensure_llm_loaded
     def stream_ask(self, question: str) -> tuple[str, list[SearchResult]]:
         # TODO: Should print the error on vectorizer mismach
-        rag = RAG(self.db, self.llm)
-        stream, sources = rag.stream(question)
+        stream, sources = self.rag.stream(question)
         return stream, sources
