@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Generator
+from typing import List, Dict, Any, Generator, Set
+from pathlib import Path
 from .data_models import Document
 
 
@@ -71,10 +72,27 @@ class BaseLoader(ABC):
     """Abstract base class for document loaders."""
 
     name: str
+    supported_formats: Set[str] = set()  
 
     def __init__(self, **kwargs: Dict[str, Any]):
         """Initialize the loader with configuration parameters."""
         self.config = kwargs
+
+    def _validate_file_format(self, file_path: Path) -> bool:
+        """Validate if the file format is supported by this loader."""
+        if not self.supported_formats:
+            return True  # If no formats specified, assume all are supported
+        
+        file_extension = file_path.suffix.lower().lstrip('.')
+        return file_extension in self.supported_formats
+
+    def _raise_unsupported_format_error(self, file_path: Path):
+        """Raise an error for unsupported file format."""
+        file_extension = file_path.suffix.lower().lstrip('.')
+        raise ValueError(
+            f"Unsupported file format '{file_extension}' for {self.name} loader. "
+            f"Supported formats: {', '.join(sorted(self.supported_formats))}"
+        )
 
     @abstractmethod
     def load_files_from_dir(self, path: str) -> List[Document]:
