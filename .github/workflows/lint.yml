@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup uv
+      uses: ./.github/actions/setup-uv
+      with:
+        python-version: '3.12'
+        install-dev: 'true'
+    
+    - name: Run ruff check
+      run: uv run ruff check .
+    
+    - name: Run ruff format check
+      run: uv run ruff format --check .

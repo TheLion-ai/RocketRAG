@@ -115,11 +115,18 @@ class TestRocketRAGIntegration:
 
         # Ask a question using streaming
         question = "What are the main topics covered?"
-        response, sources = integration_rocketrag.stream_ask(question)
+        stream, sources = integration_rocketrag.stream_ask(question)
+
+        # Consume the stream to get the complete response
+        full_response = ""
+        for output in stream:
+            delta = output["choices"][0]["delta"]
+            if "content" in delta:
+                full_response += delta["content"]
 
         # Verify response (streaming should still return complete response)
-        assert isinstance(response, str)
-        assert len(response) > 0
+        assert isinstance(full_response, str)
+        assert len(full_response) > 0
 
         # Verify sources
         assert isinstance(sources, list)
@@ -204,7 +211,7 @@ class TestRocketRAGIntegration:
         """Test recreating the database."""
         # Prepare the database
         integration_rocketrag.prepare()
-        initial_count = integration_rocketrag.db.count_records()
+        initial_count = integration_rocketrag.db.get_total_count()
         assert initial_count > 0
 
         # Recreate the database

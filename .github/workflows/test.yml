@@ -1,0 +1,35 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [ "main", "dev" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup uv
+      uses: ./.github/actions/setup-uv
+      with:
+        python-version: ${{ matrix.python-version }}
+        install-dev: 'true'
+    
+    - name: Run tests
+      run: uv run pytest -v --cov=rocketrag --cov-report=term-missing
+    
+    - name: Run type checking (if available)
+      run: |
+        if uv run python -c "import mypy" 2>/dev/null; then
+          uv run mypy rocketrag
+        else
+          echo "Type checker not available, skipping"
+        fi
+      continue-on-error: true
