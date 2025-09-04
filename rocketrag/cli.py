@@ -243,7 +243,7 @@ def server(
         chunker=chunker,
         loader=loader,
     )
-    start_server(rag)
+    start_server(rag, port=port, host=host)
 
 
 @app.command()
