@@ -6,6 +6,18 @@ from .base import BaseLoader
 
 class KreuzbergLoader(BaseLoader):
     name = "kreuzberg"
+    supported_formats = {
+        # Documents
+        "pdf", "docx", "doc", "rtf", "txt", "epub",
+        # Images
+        "jpg", "jpeg", "png", "tiff", "bmp", "gif", "webp",
+        # Spreadsheets
+        "xlsx", "xls", "csv", "ods",
+        # Presentations
+        "pptx", "ppt", "odp",
+        # Web
+        "html", "xml", "mhtml"
+    }
 
     def __init__(self, **kwargs: dict):
         super().__init__(**kwargs)
@@ -13,7 +25,19 @@ class KreuzbergLoader(BaseLoader):
     def load_files_from_dir(self, path: str):
         documents: list[Document] = []
         for file in Path(path).iterdir():
-            documents.append(Document(extract_file_sync(file).content, file.name))
+            if file.is_file(): 
+                if not self._validate_file_format(file):
+                    self._raise_unsupported_format_error(file)
+                
+                try:
+                    content = extract_file_sync(file).content
+                    documents.append(Document(content, file.name))
+                except Exception as e:
+                    # Re-raise with more context about the file
+                    raise ValueError(
+                        f"Failed to process file '{file.name}': {str(e)}. "
+                        f"This may be due to an unsupported file format or corrupted file."
+                    ) from e
         return documents
 
 
